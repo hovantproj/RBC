@@ -18,33 +18,27 @@ void setup() {
     pinMode(in3, OUTPUT);
     pinMode(in4, OUTPUT);
 
-    delay(1)
+    delay(1);
 }
 
 void loop() {
     digitalWrite(LED_PIN , HIGH);
 
     // Drive forward
-    analogueWrite(in1, 100);
-    analogueWrite(in2, 0);
-    analogueWrite(in3, 100);
-    analogueWrite(in4, 0);
+    analogWrite(in1, 100);
+    analogWrite(in2, 0);
+    analogWrite(in3, 100);
+    analogWrite(in4, 0);
 
-    '''
-    digitalWrite(in1, HIGH);
-    digitalWrite(in2, LOW);
-    digitalWrite(in3, HIGH);
-    digitalWrite(in4, LOW);
-    '''
     delay(1000);
 
     digitalWrite(LED_PIN , LOW);
 
     // Drive backwards
-    analogueWrite(in1, 0);
-    analogueWrite(in2, 100);
-    analogueWrite(in3, 0);
-    analogueWrite(in4, 100);
+    analogWrite(in1, 0);
+    analogWrite(in2, 100);
+    analogWrite(in3, 0);
+    analogWrite(in4, 100);
     delay(1000);
 
     // Turn one way
