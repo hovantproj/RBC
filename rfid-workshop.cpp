@@ -18,6 +18,10 @@ Servo myservo;  // create servo object to control a servo
 bool readBlockData(byte blockAddr, byte trailerBlock, byte* outputBuffer);
 int pos = 0;    // variable to store the servo position
 
+int findSectorTrailer(int blockToRead) {
+  return (3-blockToRead%4)+blockToRead;
+}
+
 void setup() {
   myservo.attach(8);  // attaches the servo on pin 9 to the servo object
 
@@ -40,13 +44,14 @@ void loop() {
   
   // Sector 11: Block 44 data, Block 47
   byte blockToRead = 60;
-  byte sectorTrailer = (3-blockToRead%4)+blockToRead;
+  byte sectorTrailer = findSectorTrailer(blockToRead);
 
   if (readBlockData(blockToRead, sectorTrailer, cardData)) {
     pos = cardData;				// try experimenting with this value and rerun the code
     myservo.write(pos);              // tell servo to go to position in pos
   }
 }
+
 
 /**
  * Reads a 16-byte data block from a MIFARE RFID tag.
