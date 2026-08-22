@@ -2,11 +2,11 @@
 
 // Motor controls for Motor A1 and A2 (wired together)
 const int in1 = 10; // in1 pin
-const int in2 = 6; // in2 pin
+const int in2 = 9; // in2 pin
 
 // Motor controls for Motor B1 and B2 (wired together)
-const int in3 = 9; // in3 pin
-const int in4 = 10; // in4 pin
+const int in3 = 6; // in3 pin
+const int in4 = 5; // in4 pin
 
 void setup() {
     // initialize digital pin LED_PIN as an output for testing.
