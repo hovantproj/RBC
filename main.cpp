@@ -43,9 +43,9 @@ const int minServo = 0;
 const int maxGripPos = 75; // 75 is open, 0 is closed
 const int maxRaisePos = 95; // Max for raise
 
-// function prototypes
-void grab();
-void release();
+void close_grip();
+void open_grip();
+
 void raise();
 void lower();
 
@@ -378,22 +378,6 @@ void orient() {
     }
     direction = desired;
     return;
-}
-
-void toggle_servo(Servo &servo, int &currentPos, int minPos, int maxPos) {
-    if (currentPos == minPos) {
-        for (int pos = minPos; pos <= maxPos; pos += stepSize) {
-            servo.write(pos);
-        }
-        currentPos = maxPos;
-    }
-
-    else {
-        for (int pos = maxPos; pos >= minPos; pos -= stepSize) {
-            servo.write(pos);
-        }
-        currentPos = minPos;
-    }
 }
 
 void close_grip() {
