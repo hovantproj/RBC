@@ -130,7 +130,7 @@ void loop() {
     raise();
     lower();
     stop();
-    digitalWrite(LED_PIN, LOW);
+    digitalWrite(LED_PIN, HIGH);
 
     // Obtain animal coordinates from start tag.
     byte blockData[16];

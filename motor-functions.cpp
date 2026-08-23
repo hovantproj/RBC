@@ -14,6 +14,7 @@ void forward(int ms) {
     analogWrite(in3, 60);
     analogWrite(in4, 0);
     delay(ms);
+    stop();
     return;
 }
 
@@ -23,24 +24,27 @@ void backward(int ms) {
     analogWrite(in3, 0);
     analogWrite(in4, 60);
     delay(ms);
+    stop();
     return;
 }
 
-void turnRight() {
+void turnLeft() {
     analogWrite(in1, 100);
     analogWrite(in2, 0);
     analogWrite(in3, 0);
     analogWrite(in4, 120);
     delay(550);
+    stop();
     return;
 }
 
-void turnLeft() {
+void turnRight() {
     analogWrite(in1, 0);
     analogWrite(in2, 100);
     analogWrite(in3, 110);
     analogWrite(in4, 0);
-    delay(550);
+    delay(600);
+    stop();
     return;
 }
 
@@ -71,40 +75,37 @@ void loop() {
     digitalWrite(LED_PIN, HIGH);
 
     // forward
-    forward(1000);
+    forward(4600);
     digitalWrite(LED_PIN, LOW);
+    delay(100);
 
-    // 90 degree to the right
+    // turn right
     turnRight();
     digitalWrite(LED_PIN, HIGH);
+    delay(100);
 
     // forward
+    forward(2000);
+    digitalWrite(LED_PIN, LOW);
+    delay(100);
+
+    // turn right
+    turnRight();
+    digitalWrite(LED_PIN, HIGH);
+    delay(100);
+
+    // drive back
+    forward(4600);
+    digitalWrite(LED_PIN, LOW);
+    delay(100);
+
+    // turn back towards start
+    turnRight();
+    delay(100);
+
+    // drive back into start area
     forward(1000);
-    digitalWrite(LED_PIN, LOW);
-
-    // 90 degree to the left
-    turnLeft();
-    digitalWrite(LED_PIN, HIGH);
-
-    // backwards
-    backward(1000);
-    digitalWrite(LED_PIN, LOW);
-
-    // 3 x 90 degree to the right
-    turnRight();
-    delay(100);
-    digitalWrite(LED_PIN, HIGH);
-    turnRight();
-    delay(100);
-    digitalWrite(LED_PIN, LOW);
-    turnRight();
-    delay(100);
-    digitalWrite(LED_PIN, HIGH);
-
-    // forward
-    forward(1000);
-    digitalWrite(LED_PIN, LOW);
 
     stop();
-    delay(10000);
+    delay(100000);
 }
