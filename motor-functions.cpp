@@ -38,7 +38,7 @@ void turnRight() {
 void turnLeft() {
     analogWrite(in1, 0);
     analogWrite(in2, 100);
-    analogWrite(in3, 120);
+    analogWrite(in3, 110);
     analogWrite(in4, 0);
     delay(550);
     return;
