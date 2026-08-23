@@ -2,6 +2,7 @@
 #include <MFRC522.h>
 #include <Servo.h>
 #include <vector>
+#include <cmath>
 using namespace std;
 
 #define LED_PIN 13
@@ -43,17 +44,20 @@ int findSectorTrailer(int blockToRead);
 // --- Pathfinding ---
 vector<int> pos = {0, 0}; // starts at (0,0)
 vector<int> nextPos = {0, 0};
-vector<int> currentAnimal = {0,0}; // position of next animal to retrieve
+vector<int> currentAnimal; // position of next animal to retrieve
 int direction = 0; // NORTH = 0, EAST = 1, SOUTH = 2, WEST = 3
 bool travellingToAnimal = false;
 bool haveAnimal = false;
+int animalsSaved = 0;
 vector<vector<int>> animalPosArray;
+int animalsChecked = 0;
 
 // function prototypes
 void determineNextPos();
 void orient();
 void reOrient();
-void distanceTo();
+float distanceTo();
+void determineFriendliness();
 
 void setup() {
     // --- Testing ---
@@ -118,8 +122,35 @@ void loop() {
             animalPosArray.push_back(animalPos);
         }
     }
-}
 
+    while (animalsSaved < 2 && animalsChecked < 3) {
+        int currentAnimalsChecked = animalsChecked;
+        // determine closest animal
+        int closest = 0;
+        float bestDistance = 100;
+        for (size_t i; i < animalPosArray.size(); i++) {
+            float distance = distanceTo(pos, animalPosArray[i]);
+            if (distance < bestDistance) {
+                bestDistance = distance;
+                closest = i;
+            }
+        }
+
+        currentAnimal = animalPosArray[closest];
+        while (currentAnimalsChecked == animalsChecked) {
+            determineNextPos();
+            orient();
+            while (pos != nextPos) {
+                
+            }
+        }
+        // move forward while checking RFID tags to ensure we're on track
+        // if off track, needs to do the back and forth thing to re-orient
+
+    }
+
+    // head back to start and drop animals
+}
 
 void forward(int ms) {
     analogWrite(in1, 50);
@@ -223,6 +254,13 @@ bool readBlockData(byte blockAddr, byte trailerBlock, byte* outputBuffer) {
 }
 
 void determineNextPos() {
+    // if travelling to animal but trying to determine next pos => already at animal
+    if (travellingToAnimal) {
+        // call all the necessary gripping functions and allat
+        determineFriendliness();
+        return;
+    }
+
     // if have animal, need to navigate to 0,0
     if (haveAnimal) {
         // if x coordinates don't match, travel to 0,y
@@ -283,4 +321,44 @@ void orient() {
     }
     direction = desired;
     return;
+}
+
+/**
+ * Calculates the distance between two positions
+ * 
+ * @param startPos    Vector (x,y) of starting position
+ * @param endPos      Vector (x,y) of ending position
+ * @return            Distance between the two positions
+ */
+float distanceTo(vector<int> startPos, vector<int> endPos) {
+  int xdiff = (startPos[0]-endPos[0])*(startPos[0]-endPos[0]);
+  int ydiff = (startPos[1]-endPos[1])*(startPos[1]-endPos[1]);
+  float distance = sqrt(xdiff + ydiff);
+  return distance;
+}
+
+void determineFriendliness() {
+    // keep checking if in ring of 8 SCRAP - ONLY CALLED WHEN IN RING OF 8
+    byte blockData[16];
+    byte blockToRead = 57;
+    byte sectorTrailer = findSectorTrailer(blockToRead);
+    bool friendly = false;
+    // read block data
+    if (readBlockData(blockToRead, sectorTrailer, cardData)) {
+        animalsChecked++;
+        if ((int) blockData[15]==3) {
+            if (animalsSaved==0) {
+                // sequence to pick up first animal
+                animalsSaved++;
+            } else {
+                // sequence to pick up second animal
+                animalsSaved++;
+            }
+        } else if ((int) blockData[15]==0) {
+            // ERROR SEQUENCE - probably just spin and blink light
+        } else if ((int) blockData[15]==2) {
+            // delete animal position from array (we don't want it)
+            animalPosArray.erase(animalPosArray.begin() + closest)
+        }
+    }
 }
