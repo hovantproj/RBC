@@ -11,8 +11,8 @@ using namespace std;
 // Servo pin configuration
 #define RST_PIN 
 #define SS_PIN  
-#define GRIP_SERVO_PIN // attach grip servo object to this
-#define RAISE_SERVO_PIN // attach raise servo object to this
+#define GRIP_SERVO_PIN 3 // attach grip servo object to this
+#define RAISE_SERVO_PIN 11 // attach raise servo object to this
 // Motor controls for Motor A1 and A2 (wired together)
 const int in1 = 10; // in1 pin
 const int in2 = 9; // in2 pin
@@ -32,6 +32,21 @@ void stop();
 // --- Servo Setup ---
 Servo gripServo;  // create servo object to control the servo responsible for opening and closing of the gripper
 Servo raiseServo; // create servo object to control the raising and lowering of the gripper via a pulley
+
+int gripServoPos; // Current positions
+int raiseServoPos;
+
+const int stepSize = 5;
+
+const int minServo = 0;
+const int maxGripPos = 75; // 75 is open, 0 is closed
+const int maxRaisePos = 95; // Max for raise
+
+void grab();
+void release();
+
+void raise();
+void lower();
 
 // --- RFID setup ---
 MFRC522 mfrc522(SS_PIN, RST_PIN);
@@ -67,6 +82,12 @@ void setup() {
     // --- Servo ---
     gripServo.attach(GRIP_SERVO_PIN);
     raiseServo.attach(RAISE_SERVO_PIN);
+
+    gripServoPos = maxGripPos;
+    raiseServoPos = maxRaisePos;
+
+    gripServo.write(gripServoPos);
+    raiseServo.write(raiseServoPos);
 
     // --- RFID --- 
     Serial.begin(9600);
@@ -322,6 +343,43 @@ void orient() {
     direction = desired;
     return;
 }
+
+void toggle_servo(Servo &servo, int &currentPos, int minPos, int maxPos) {
+    if (currentPos == minPos) {
+        for (int pos = minPos; pos <= maxPos; pos += stepSize) {
+            servo.write(pos);
+        }
+        currentPos = maxPos;
+    }
+
+    else {
+        for (int pos = maxPos; pos >= minPos; pos -= stepSize) {
+            servo.write(pos);
+        }
+        currentPos = minPos;
+    }
+}
+
+void close_grip() {
+    gripServo.write(minServo);
+    gripServoPos = minServo;
+}
+
+void open_grip() {
+    gripServo.write(maxGripPos);
+    gripServoPos = maxGripPos;
+}
+
+void raise() {
+    raiseServo.write(maxRaisePos);
+    raiseServoPos = maxRaisePos; // For debugging
+}
+
+void lower() {
+    raiseServo.write(minServo);
+    raiseServo = minServo;
+}
+
 
 /**
  * Calculates the distance between two positions
