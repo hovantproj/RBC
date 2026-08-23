@@ -13,4 +13,5 @@ To be counted as successfully returned, an animal must be placed entirely within
 
 The 8 RFID points surrounding each animal contain coordinate data and dictate whether the animal is safe to take. Your robot must autonomously read this data and decide whether to transport the animal. You should take care to scan each animal you return. No remote control function will be allowed
 
-Refer to sketch in document for more info
+![final robot image](finalImg.jpg)
+
