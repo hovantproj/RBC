@@ -8,9 +8,10 @@ using namespace std;
 #define LED_PIN 13
 
 // --- Pin Configuration ---
+// RFID pin configuration
+#define RST_PIN 4
+#define SS_PIN  2
 // Servo pin configuration
-#define RST_PIN 
-#define SS_PIN  
 #define GRIP_SERVO_PIN 3 // attach grip servo object to this
 #define RAISE_SERVO_PIN 11 // attach raise servo object to this
 // Motor controls for Motor A1 and A2 (wired together)
@@ -42,9 +43,9 @@ const int minServo = 0;
 const int maxGripPos = 75; // 75 is open, 0 is closed
 const int maxRaisePos = 95; // Max for raise
 
+// function prototypes
 void grab();
 void release();
-
 void raise();
 void lower();
 
@@ -133,23 +134,25 @@ void setup() {
 void loop() {
     // obtain animal coordinates from start tag
     byte blockData[16];
-    for (int i; i=52; i++) {
+    for (int i=52; i<54; i++) {
         byte blockToRead = i;
-        byte sectorTrailer = findSectorTrailer(blockToRead);
+        byte sectorTrailer = (byte) findSectorTrailer(blockToRead);
 
         // BRUHHH need to make it so that if it can't read data it just moves forward one position asw
         if (readBlockData(blockToRead, sectorTrailer, cardData)) {
+            digitalWrite(LED_PIN, HIGH);
             vector<int> animalPos = {(int)blockData[3], (int)blockData[7]};
             animalPosArray.push_back(animalPos);
         }
     }
 
+    // keep searching for animals until quota is met
     while (animalsSaved < 2 && animalsChecked < 3) {
         int currentAnimalsChecked = animalsChecked;
         // determine closest animal
         int closest = 0;
         float bestDistance = 100;
-        for (size_t i; i < animalPosArray.size(); i++) {
+        for (size_t i=0; i < animalPosArray.size(); i++) {
             float distance = distanceTo(pos, animalPosArray[i]);
             if (distance < bestDistance) {
                 bestDistance = distance;
@@ -157,20 +160,45 @@ void loop() {
             }
         }
 
+        // until we check an animal, keep moving towards it
         currentAnimal = animalPosArray[closest];
+        byte coordBlockAddr = 56;
         while (currentAnimalsChecked == animalsChecked) {
+            // determine where to head next
             determineNextPos();
+            // orient
             orient();
+            // head towards it slowly, checking position against RFID tag coordinates
             while (pos != nextPos) {
-                
+                forward(10);
+                if (readBlockData(coordBlockAddr, coordBlockAddr, blockData)) {
+                    pos[0] = (int) blockData[3];
+                    pos[1] = (int) blockData[15];
+                }
             }
         }
-        // move forward while checking RFID tags to ensure we're on track
-        // if off track, needs to do the back and forth thing to re-orient
-
     }
 
     // head back to start and drop animals
+    while (pos[0] != 2 && pos[1] != 2) {
+        determineNextPos();
+        // orient
+        orient();
+        // head towards it slowly, checking position against RFID tag coordinates
+        while (pos != nextPos) {
+            forward(10);
+            if (readBlockData(coordBlockAddr, coordBlockAddr, blockData)) {
+                digitalWrite(LED_PIN, HIGH);
+                pos[0] = (int) blockData[3];
+                pos[1] = (int) blockData[15];
+            }
+        }
+        digitalWrite(LED_PIN, LOW);
+    }
+    
+    // stop
+    stop();
+    delay(10000);
 }
 
 void forward(int ms) {
@@ -179,6 +207,10 @@ void forward(int ms) {
     analogWrite(in3, 60);
     analogWrite(in4, 0);
     delay(ms);
+    analogWrite(in1, 0);
+    analogWrite(in2, 0);
+    analogWrite(in3, 0);
+    analogWrite(in4, 0);
     return;
 }
 
@@ -188,6 +220,10 @@ void backward(int ms) {
     analogWrite(in3, 0);
     analogWrite(in4, 60);
     delay(ms);
+    analogWrite(in1, 0);
+    analogWrite(in2, 0);
+    analogWrite(in3, 0);
+    analogWrite(in4, 0);
     return;
 }
 
@@ -277,23 +313,23 @@ bool readBlockData(byte blockAddr, byte trailerBlock, byte* outputBuffer) {
 void determineNextPos() {
     // if travelling to animal but trying to determine next pos => already at animal
     if (travellingToAnimal) {
+        travellingToAnimal = false;
         // call all the necessary gripping functions and allat
         determineFriendliness();
         return;
     }
 
-    // if have animal, need to navigate to 0,0
+    // if have animal, need to navigate to 2,2
     if (haveAnimal) {
-        // if x coordinates don't match, travel to 0,y
-        if (pos[0] != 0) {
-            nextPos[0] = 0;
+        // if x coordinates don't match, travel to 2,y
+        if (pos[0] != 2) {
+            nextPos[0] = 2;
             nextPos[1] = pos[1];
-        // if y coordinates don't match travel to 0,0
-        } else if (pos[0] != 0) {
-            nextPos[0] = 0;
-            nextPos[1] = 0;
+        // if y coordinates don't match travel to 2,2
+        } else if (pos[0] != 2) {
+            nextPos[0] = 2;
+            nextPos[1] = 2;
         }
-
         return;
     // otherwise travelling to animal: if x coordinates don't match, travel to matching X
     } else if (pos[0] != currentAnimal[0]) {
@@ -361,23 +397,31 @@ void toggle_servo(Servo &servo, int &currentPos, int minPos, int maxPos) {
 }
 
 void close_grip() {
-    gripServo.write(minServo);
+    for (int pos = gripServoPos; pos >= minServo; pos -= stepSize) {
+            gripServo.write(pos);
+    }
     gripServoPos = minServo;
 }
 
 void open_grip() {
-    gripServo.write(maxGripPos);
+    for (int pos = gripServoPos; pos <= maxGripPos; pos += stepSize) {
+            gripServo.write(pos);
+    }
     gripServoPos = maxGripPos;
 }
 
 void raise() {
-    raiseServo.write(maxRaisePos);
+    for (int pos = raiseServoPos; pos <= maxRaisePos; pos += stepSize) {
+            raiseServo.write(pos);
+    }
     raiseServoPos = maxRaisePos; // For debugging
 }
 
 void lower() {
-    raiseServo.write(minServo);
-    raiseServo = minServo;
+    for (int pos = raiseServoPos; pos <= maxRaisePos; pos += stepSize) {
+            raiseServo.write(pos);
+    }
+    raiseServoPos = minServo; // For debugging
 }
 
 
