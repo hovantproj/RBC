@@ -62,11 +62,13 @@ vector<int> currentAnimal = {0,0}; // position of next animal to retrieve
 int direction = 0; // NORTH = 0, EAST = 1, SOUTH = 2, WEST = 3
 bool travellingToAnimal = false;
 bool haveAnimal = false;
+vector<vector<int>> animalPosArray;
 
 // function prototypes
 void determineNextPos();
 void orient();
 void reOrient();
+void distanceTo();
 
 void setup() {
     // --- Testing ---
@@ -127,8 +129,16 @@ void setup() {
 void loop() {
     // obtain animal coordinates from start tag
     byte blockData[16];
-    byte blockToRead = ;
-    byte sectorTrailer = findSectorTrailer(blockToRead);
+    for (int i; i=52; i++) {
+        byte blockToRead = i;
+        byte sectorTrailer = findSectorTrailer(blockToRead);
+
+        // BRUHHH need to make it so that if it can't read data it just moves forward one position asw
+        if (readBlockData(blockToRead, sectorTrailer, cardData)) {
+            vector<int> animalPos = {(int)blockData[3], (int)blockData[7]};
+            animalPosArray.push_back(animalPos);
+        }
+    }
 }
 
 
