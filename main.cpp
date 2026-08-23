@@ -67,12 +67,14 @@ bool haveAnimal = false;
 int animalsSaved = 0;
 vector<vector<int>> animalPosArray;
 int animalsChecked = 0;
+int closest = 0;
+byte coordBlockAddr = 56;
 
 // function prototypes
 void determineNextPos();
 void orient();
 void reOrient();
-float distanceTo();
+float distanceTo(vector<int> startPos, vector<int> endPos);
 void determineFriendliness();
 
 void setup() {
@@ -113,35 +115,18 @@ void setup() {
     delay(10000);
 }
 
-// obtain animal coordinates 
-
-    // while not yet 2 friendly animals
-    // decide which one is closest
-
-    // travel to it (orient -> travel along x -> turn -> travel along y)
-        // along the way, verify direction by comparing current coordinate to last coordinate
-
-    // once in coordinate space of purple tags, verify animal friendliness
-        // if friendly, grab it
-        // if not friendly, idk just backtrack
-
-    // we might wna pivot to instead grabbing both in one go...
-    // somehow backtrack... (should i just use the same algorithm? or try to go backwards to avoid turns...)
-        // if i've already gotten one friendly animal, maybe try not to knock over the other one since it needs to be on the ground at the end
-
-    // finish while loop, stop for 30s back at the start
-
 void loop() {
+    digitalWrite(LED_PIN, LOW);
     // obtain animal coordinates from start tag
     byte blockData[16];
-    for (int i=52; i<54; i++) {
+    for (int i=52; i<55; i++) {
         byte blockToRead = i;
         byte sectorTrailer = (byte) findSectorTrailer(blockToRead);
 
         // BRUHHH need to make it so that if it can't read data it just moves forward one position asw
-        if (readBlockData(blockToRead, sectorTrailer, cardData)) {
+        if (readBlockData(blockToRead, sectorTrailer, blockData)) {
             digitalWrite(LED_PIN, HIGH);
-            vector<int> animalPos = {(int)blockData[3], (int)blockData[7]};
+            vector<int> animalPos = {(int)blockData[3], (int)blockData[11]};
             animalPosArray.push_back(animalPos);
         }
     }
@@ -150,7 +135,6 @@ void loop() {
     while (animalsSaved < 2 && animalsChecked < 3) {
         int currentAnimalsChecked = animalsChecked;
         // determine closest animal
-        int closest = 0;
         float bestDistance = 100;
         for (size_t i=0; i < animalPosArray.size(); i++) {
             float distance = distanceTo(pos, animalPosArray[i]);
@@ -162,7 +146,6 @@ void loop() {
 
         // until we check an animal, keep moving towards it
         currentAnimal = animalPosArray[closest];
-        byte coordBlockAddr = 56;
         while (currentAnimalsChecked == animalsChecked) {
             // determine where to head next
             determineNextPos();
@@ -173,14 +156,14 @@ void loop() {
                 forward(10);
                 if (readBlockData(coordBlockAddr, coordBlockAddr, blockData)) {
                     pos[0] = (int) blockData[3];
-                    pos[1] = (int) blockData[15];
+                    pos[1] = (int) blockData[11];
                 }
             }
         }
     }
 
     // head back to start and drop animals
-    while (pos[0] != 2 && pos[1] != 2) {
+    while (pos[0] != 2 || pos[1] != 2) {
         determineNextPos();
         // orient
         orient();
@@ -190,7 +173,7 @@ void loop() {
             if (readBlockData(coordBlockAddr, coordBlockAddr, blockData)) {
                 digitalWrite(LED_PIN, HIGH);
                 pos[0] = (int) blockData[3];
-                pos[1] = (int) blockData[15];
+                pos[1] = (int) blockData[11];
             }
         }
         digitalWrite(LED_PIN, LOW);
@@ -198,7 +181,7 @@ void loop() {
     
     // stop
     stop();
-    delay(10000);
+    while (true) {}
 }
 
 void forward(int ms) {
@@ -326,7 +309,7 @@ void determineNextPos() {
             nextPos[0] = 2;
             nextPos[1] = pos[1];
         // if y coordinates don't match travel to 2,2
-        } else if (pos[0] != 2) {
+        } else if (pos[1] != 2) {
             nextPos[0] = 2;
             nextPos[1] = 2;
         }
@@ -337,11 +320,11 @@ void determineNextPos() {
         if (pos[1] == currentAnimal[1]) {
             nextPos[0] = currentAnimal[0] - 1;
             nextPos[1] = pos[1];
-            travellingToAnimal = true
+            travellingToAnimal = true;
         } else {
             nextPos[0] = currentAnimal[0];
             nextPos[1] = pos[1];
-            travellingToAnimal = false
+            travellingToAnimal = false;
         }
     // if y coordinates don't match, travel to 1 less to pick it up
     } else if (pos[1] != currentAnimal[1]) {
@@ -354,7 +337,7 @@ void determineNextPos() {
 
 void orient() {
     int diff = 0;
-    int desired = 0;
+    int desired = direction;
     // heading east
     if (pos[0] < nextPos[0]) {
         desired = 1;
@@ -402,7 +385,7 @@ void raise() {
 }
 
 void lower() {
-    for (int pos = raiseServoPos; pos <= maxRaisePos; pos += stepSize) {
+    for (int pos = raiseServoPos; pos >= minServo; pos -= stepSize) {
             raiseServo.write(pos);
     }
     raiseServoPos = minServo; // For debugging
@@ -430,21 +413,24 @@ void determineFriendliness() {
     byte sectorTrailer = findSectorTrailer(blockToRead);
     bool friendly = false;
     // read block data
-    if (readBlockData(blockToRead, sectorTrailer, cardData)) {
-        animalsChecked++;
-        if ((int) blockData[15]==3) {
+    if (readBlockData(blockToRead, sectorTrailer, blockData)) {
+        if (if ((blockData[15] & 0x0F) == 3)) {
+            animalsChecked++;
+            animalPosArray.erase(animalPosArray.begin() + closest);
             if (animalsSaved==0) {
                 // sequence to pick up first animal
                 animalsSaved++;
             } else {
                 // sequence to pick up second animal
                 animalsSaved++;
+                haveAnimal = true;
             }
-        } else if ((int) blockData[15]==0) {
+        } else if (if ((blockData[15] & 0x0F) == 0)) {
             // ERROR SEQUENCE - probably just spin and blink light
-        } else if ((int) blockData[15]==2) {
+        } else if (if ((blockData[15] & 0x0F) == 2)) {
+            animalsChecked++;
             // delete animal position from array (we don't want it)
-            animalPosArray.erase(animalPosArray.begin() + closest)
+            animalPosArray.erase(animalPosArray.begin() + closest);
         }
     }
 }
