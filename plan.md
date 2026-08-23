@@ -30,3 +30,14 @@ Figure out how everything will sit together...
 - [ ] figure out how to mount the gripper onto the robot
 - [ ] decide where the arduino will sit (powered by L298N module?)
 - [ ] also need a space for the 
+___
+
+## Day 2 plan
+**Gripper**
+- [ ] mount gripper
+- [ ] connect servos
+- [ ] write gripper code
+- [ ] test gripper
+
+**Code**
+- [ ] just write all the code
