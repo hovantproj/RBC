@@ -1,6 +1,3 @@
-Library/
-robot_arduino_no_vectors.ino
-
 #include <SPI.h>
 #include <MFRC522.h>
 #include <Servo.h>
@@ -125,11 +122,14 @@ void setup() {
     pinMode(in2, OUTPUT);
     pinMode(in3, OUTPUT);
     pinMode(in4, OUTPUT);
-
-    delay(10000);
+    stop();
+    delay(1000);
 }
 
 void loop() {
+    raise();
+    lower();
+    stop();
     digitalWrite(LED_PIN, LOW);
 
     // Obtain animal coordinates from start tag.
@@ -141,13 +141,12 @@ void loop() {
         byte blockToRead = (byte)i;
         byte sectorTrailer = (byte)findSectorTrailer(blockToRead);
 
-        if (readBlockData(blockToRead, sectorTrailer, blockData)) {
-            digitalWrite(LED_PIN, HIGH);
-
-            animalPosArray[animalCount][0] = (int)blockData[3];
-            animalPosArray[animalCount][1] = (int)blockData[11];
-            animalCount++;
+        while (!readBlockData(blockToRead, sectorTrailer, blockData)) {
+            delay(500);
         }
+        animalPosArray[animalCount][0] = (int)blockData[3];
+        animalPosArray[animalCount][1] = (int)blockData[11];
+        animalCount++;
     }
 
     // Keep searching for animals until quota is met.
@@ -224,9 +223,9 @@ void loop() {
 // --- Motor Functions ---
 
 void forward(int ms) {
-    analogWrite(in1, 50);
+    analogWrite(in1, 10);
     analogWrite(in2, 0);
-    analogWrite(in3, 60);
+    analogWrite(in3, 12);
     analogWrite(in4, 0);
 
     delay(ms);
@@ -236,33 +235,33 @@ void forward(int ms) {
 
 void backward(int ms) {
     analogWrite(in1, 0);
-    analogWrite(in2, 50);
+    analogWrite(in2, 10);
     analogWrite(in3, 0);
-    analogWrite(in4, 60);
-
+    analogWrite(in4, 12);
+    
     delay(ms);
 
     stop();
 }
 
 void turnRight() {
-    analogWrite(in1, 100);
+    analogWrite(in1, 25);
     analogWrite(in2, 0);
     analogWrite(in3, 0);
-    analogWrite(in4, 120);
+    analogWrite(in4, 30);
 
-    delay(550);
+    delay(2200);
 
     stop();
 }
 
 void turnLeft() {
     analogWrite(in1, 0);
-    analogWrite(in2, 100);
-    analogWrite(in3, 110);
+    analogWrite(in2, 25);
+    analogWrite(in3, 28);
     analogWrite(in4, 0);
 
-    delay(550);
+    delay(2200);
 
     stop();
 }
@@ -295,9 +294,11 @@ int findSectorTrailer(int blockToRead) {
 bool readBlockData(byte blockAddr, byte trailerBlock, byte* outputBuffer) {
     // Check if a card is present and can be read.
     if (!mfrc522.PICC_IsNewCardPresent() || !mfrc522.PICC_ReadCardSerial()) {
+        digitalWrite(LED_PIN, LOW);
         return false;
     }
 
+    digitalWrite(LED_PIN, HIGH);
     // MIFARE_Read requires at least 18 bytes:
     // 16 data bytes + 2 CRC bytes.
     byte rawBuffer[18];
@@ -520,11 +521,21 @@ void determineFriendliness() {
             // lower();
             // close_grip();
             // raise();
+            open_grip();
+            lower();
+            close_grip();
+            raise();
 
             animalsSaved++;
         } else {
             // Sequence to pick up second animal.
             // Add your gripper/lift sequence here.
+            backward(300);
+            lower();
+            open_grip();
+            forward(300);
+            close_grip();
+            raise();
 
             animalsSaved++;
         }
